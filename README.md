@@ -13,6 +13,8 @@ Drop JAV files → JavSP scrapes metadata → Plex reads NFO + fetches actress p
 
 ## Setup
 
+### Option 1: Interactive Script
+
 SSH into your Unraid and run:
 
 ```bash
@@ -25,6 +27,16 @@ The script will ask a few questions about your environment (media paths, proxy, 
 - Download the actress avatar database
 - Generate JavSP config
 - Create an Unraid Docker template
+
+### Option 2: AI-Assisted Setup
+
+Paste the contents of [`AGENTS.md`](AGENTS.md) into your AI coding agent and let it guide you through setup interactively.
+
+Compatible tools:
+- [OpenCode](https://github.com/opencode-ai/opencode) (recommended)
+- [Claude Code](https://docs.anthropic.com/en/docs/claude-code)
+- [Cursor](https://cursor.sh)
+- Any AI coding assistant that supports markdown context
 
 ## Credits
 
