@@ -10,22 +10,27 @@ Drop JAV files → JavSP scrapes metadata → Plex reads NFO + fetches actress p
 
 - **JavSP** (Docker) scrapes metadata from multiple sources, generates NFO files and downloads artwork
 - **JAVnfoMoviesImporter** (Plex plugin) reads NFO files and automatically fetches actress avatar photos from [gfriends](https://github.com/gfriends/gfriends)
-- Designed specifically for **Unraid** with proper permissions (nobody:users) and Docker conventions
 
 ## Setup
 
-This project uses **AI-assisted setup**. Open this repo in your AI coding tool (OpenCode, Cursor, Claude Code, etc.) and ask:
+SSH into your Unraid and run:
 
-> "Set up this Plex JAV solution on my Unraid server"
+```bash
+curl -sSL https://raw.githubusercontent.com/nxxxsooo/plex-jav/master/setup.sh | bash
+```
 
-The AI will read `AGENTS.md`, ask about your environment (paths, proxy, network), and configure everything automatically.
+The script will ask a few questions about your environment (media paths, proxy, network), then automatically:
+
+- Install the Plex plugin
+- Download the actress avatar database
+- Generate JavSP config
+- Create an Unraid Docker template
 
 ## Credits
 
-- [JavSP](https://github.com/Yuukiy/JavSP) by Yuukiy — metadata scraper
-- [JAVnfoMoviesImporter](https://github.com/ddd354/JAVnfoMoviesImporter.bundle) by ddd354 — Plex NFO importer, modified for actress avatar support
+- [JavSP](https://github.com/Yuukiy/JavSP) by Yuukiy
+- [JAVnfoMoviesImporter](https://github.com/ddd354/JAVnfoMoviesImporter.bundle) by ddd354 (modified for avatar support)
 - [gfriends](https://github.com/gfriends/gfriends) — actress avatar database
-- [rishinyan/javsp](https://hub.docker.com/r/rishinyan/javsp) — Docker image
 
 ## License
 
