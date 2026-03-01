@@ -13,7 +13,8 @@ COPY . .
 ENV POETRY_DYNAMIC_VERSIONING_BYPASS=0.0.0
 RUN poetry self add poetry-dynamic-versioning && \
     poetry config virtualenvs.in-project true && \
-    poetry lock --no-update && \
+    rm -f poetry.lock && \
+    poetry lock && \
     poetry install && \
     rm -rf /app/.git
 
