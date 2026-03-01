@@ -139,12 +139,12 @@ if [ -n "$PROXY_ENVS" ]; then
     EXTRA_PARAMS="$PROXY_ENVS"
 fi
 
-cat > "${TEMPLATE_DIR}/my-javsp.xml" <<XMLEOF
+cat > "${TEMPLATE_DIR}/my-plex-jav.xml" <<XMLEOF
 <?xml version="1.0"?>
 <Container version="2">
-  <Name>javsp</Name>
-  <Repository>ghcr.io/nxxxsooo/javsp:latest</Repository>
-  <Registry>https://github.com/nxxxsooo/JavSP/pkgs/container/javsp</Registry>
+  <Name>plex-jav</Name>
+  <Repository>ghcr.io/nxxxsooo/plex-jav:latest</Repository>
+  <Registry>https://github.com/nxxxsooo/plex-jav/pkgs/container/plex-jav</Registry>
   <Network>${DOCKER_NETWORK}</Network>
   <MyIP/>
   <Shell>sh</Shell>
@@ -174,6 +174,7 @@ XMLEOF
 
 # Remove old MetaTube template if it exists from previous version
 rm -f "${TEMPLATE_DIR}/my-metatube.xml" 2>/dev/null || true
+rm -f "${TEMPLATE_DIR}/my-javsp.xml" 2>/dev/null || true
 
 echo "     Cleanup..."
 rm -rf "$TMP_DIR"

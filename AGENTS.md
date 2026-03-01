@@ -10,7 +10,7 @@ JAV files → [JavSP Docker (with embedded MetaTube)] → NFO + artwork → [Ple
 
 Three components:
 
-1. **JavSP** (`ghcr.io/nxxxsooo/javsp:latest`) — Docker container that scrapes metadata, generates NFO files and downloads cover/fanart artwork. Includes an **embedded MetaTube server** that provides plot/synopsis from 20+ sources including FANZA/DMM — no API keys needed.
+1. **JavSP** (`ghcr.io/nxxxsooo/plex-jav:latest`) — Docker container that scrapes metadata, generates NFO files and downloads cover/fanart artwork. Includes an **embedded MetaTube server** that provides plot/synopsis from 20+ sources including FANZA/DMM — no API keys needed.
 2. **JAVnfoMoviesImporter.bundle** — Plex plugin that reads NFO files and automatically fetches actress avatar photos from the [gfriends](https://github.com/gfriends/gfriends) database
 3. **Unraid Docker + Plex** — the runtime environment
 
@@ -84,8 +84,8 @@ Use the template at `config/javsp/config.yml.template` to generate a `config.yml
 
 | Setting | Value |
 |---------|-------|
-| Name | `javsp` |
-| Repository | `ghcr.io/nxxxsooo/javsp:latest` |
+| Name | `plex-jav` |
+| Repository | `ghcr.io/nxxxsooo/plex-jav:latest` |
 | Network | User's chosen network |
 | WebUI | `http://[IP]:[PORT:8501]` |
 | Port | `8501` → `8501` TCP |
@@ -190,9 +190,20 @@ plex-jav/
 ├── docker-compose.yml                 # Reference compose (Unraid uses Docker GUI)
 ├── setup.sh                           # Interactive setup script
 ├── setup-guide.md                     # Manual setup reference
+├── .github/
+│   └── workflows/
+│       └── docker-build.yml           # CI/CD: builds ghcr.io/nxxxsooo/plex-jav
 ├── config/
 │   └── javsp/
 │       └── config.yml.template        # JavSP config template (AI fills in values)
+├── scraper/                           # JavSP scraper source code
+│   ├── javsp/                         # Main Python package
+│   ├── docker/                        # Dockerfile + entrypoint
+│   ├── data/                          # CSV data files
+│   ├── pyproject.toml                 # Poetry project config
+│   ├── poetry.lock
+│   ├── config.yml                     # Default config (copied to /config in Docker)
+│   └── ...
 └── plugin/
     └── JAVnfoMoviesImporter.bundle/   # Plex plugin (copy to Plex Plug-ins dir)
         ├── Contents/
@@ -206,8 +217,7 @@ plex-jav/
 
 ## Upstream References
 
-- JavSP: https://github.com/Yuukiy/JavSP
+- JavSP (upstream, archived): https://github.com/Yuukiy/JavSP
 - MetaTube: https://github.com/metatube-community/metatube-sdk-go
 - JAVnfoMoviesImporter (original): https://github.com/ddd354/JAVnfoMoviesImporter.bundle
 - gfriends avatar database: https://github.com/gfriends/gfriends
-- JavSP Docker image (fork): https://github.com/nxxxsooo/JavSP/pkgs/container/javsp

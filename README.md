@@ -40,7 +40,7 @@ Compatible tools:
 
 ## Credits
 
-- [JavSP](https://github.com/Yuukiy/JavSP) by Yuukiy (fork: [nxxxsooo/JavSP](https://github.com/nxxxsooo/JavSP))
+- [JavSP](https://github.com/Yuukiy/JavSP) by Yuukiy (scraper source included in `scraper/`)
 - [MetaTube](https://github.com/metatube-community/metatube-sdk-go) by metatube-community
 - [JAVnfoMoviesImporter](https://github.com/ddd354/JAVnfoMoviesImporter.bundle) by ddd354 (modified for avatar support)
 - [gfriends](https://github.com/gfriends/gfriends) — actress avatar database

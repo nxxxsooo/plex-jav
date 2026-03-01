@@ -4,3 +4,12 @@ config/javsp/config.ini
 plugin/JAVnfoMoviesImporter.bundle/Filetree.json
 *.pyc
 __pycache__/
+.venv/
+*.egg-info/
+dist/
+build/
+*.egg
+.idea/
+.vscode/
+*.cache.json
+scraper/.envrc

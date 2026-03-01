@@ -36,7 +36,7 @@ The script will ask the questions above interactively, then:
 ## After Setup
 
 1. **Restart Plex** — Docker tab → plex → Restart
-2. **Add JavSP container** — Docker tab → Add Container → select `javsp` template
+2. **Add plex-jav container** — Docker tab → Add Container → select `plex-jav` template
 3. **Create Plex library** — Add a Movies library, set content folder to your `output/` path, agent to `JAVnfoMoviesImporter`
 4. **Use it** — Drop files into `input/`, run JavSP (WebUI), scan Plex library
 

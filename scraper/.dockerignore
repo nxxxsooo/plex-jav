@@ -1,0 +1,10 @@
+**/__pycache__/
+.github/
+.idea/
+.vscode/
+.devcontainer/
+**/*.log
+unittest/
+tools/
+image/
+CHANGELOG.md
