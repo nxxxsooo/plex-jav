@@ -13,6 +13,7 @@ COPY . .
 ENV POETRY_DYNAMIC_VERSIONING_BYPASS=0.0.0
 RUN poetry self add poetry-dynamic-versioning && \
     poetry config virtualenvs.in-project true && \
+    poetry lock --no-update && \
     poetry install && \
     rm -rf /app/.git
 
@@ -49,4 +50,4 @@ ENV METATUBE_TOKEN=""
 ENV METATUBE_DSN="metatube.db"
 
 ENTRYPOINT ["/entrypoint.sh"]
-CMD ["-c", "/config/config.yml", "-i", "/media/input"]
+CMD ["-c", "/config/config.yml"]
