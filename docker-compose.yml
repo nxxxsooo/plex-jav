@@ -7,7 +7,7 @@ version: "3.8"
 
 services:
   javsp:
-    image: rishinyan/javsp:v1.8
+    image: ghcr.io/nxxxsooo/javsp:latest
     container_name: javsp
     entrypoint: /config/entrypoint.sh
     environment:
@@ -17,6 +17,8 @@ services:
       - HTTP_PROXY=${HTTP_PROXY:-}
       - HTTPS_PROXY=${HTTPS_PROXY:-}
       - NO_PROXY=${NO_PROXY:-localhost,127.0.0.1}
+      - DMM_API_ID=${DMM_API_ID:-}
+      - DMM_AFFILIATE_ID=${DMM_AFFILIATE_ID:-}
     volumes:
       - ${JAVSP_APPDATA}/config.ini:/app/core/config.ini:rw
       - ${JAVSP_APPDATA}/entrypoint.sh:/config/entrypoint.sh:rw

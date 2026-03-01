@@ -44,6 +44,11 @@ DOCKER_NETWORK="${DOCKER_NETWORK:-bridge}"
 read -p "JavSP WebUI port [8501]: " JAVSP_PORT
 JAVSP_PORT="${JAVSP_PORT:-8501}"
 
+read -p "DMM Affiliate API ID (optional, for plot/synopsis — register free at https://affiliate.dmm.com): " DMM_API_ID
+DMM_API_ID="${DMM_API_ID:-}"
+
+read -p "DMM Affiliate ID (optional, e.g. yourname-999): " DMM_AFFILIATE_ID
+DMM_AFFILIATE_ID="${DMM_AFFILIATE_ID:-}"
 echo ""
 echo "--- Confirm ---"
 echo "Media path:     ${MEDIA_PATH}"
@@ -54,6 +59,7 @@ echo "JavSP appdata:  ${JAVSP_APPDATA}"
 echo "Proxy:          ${USE_PROXY} ${PROXY_URL}"
 echo "Network:        ${DOCKER_NETWORK}"
 echo "JavSP port:     ${JAVSP_PORT}"
+echo "DMM API:        ${DMM_API_ID:-(not set)} / ${DMM_AFFILIATE_ID:-(not set)}"
 echo ""
 read -p "Proceed? (y/n) [y]: " CONFIRM
 CONFIRM="${CONFIRM:-y}"
@@ -114,8 +120,8 @@ cat > "${TEMPLATE_DIR}/my-javsp.xml" <<XMLEOF
 <?xml version="1.0"?>
 <Container version="2">
   <Name>javsp</Name>
-  <Repository>rishinyan/javsp:v1.8</Repository>
-  <Registry>https://hub.docker.com/r/rishinyan/javsp</Registry>
+  <Repository>ghcr.io/nxxxsooo/javsp:latest</Repository>
+  <Registry>https://github.com/nxxxsooo/JavSP/pkgs/container/javsp</Registry>
   <Network>${DOCKER_NETWORK}</Network>
   <MyIP/>
   <Shell>sh</Shell>
@@ -137,6 +143,8 @@ cat > "${TEMPLATE_DIR}/my-javsp.xml" <<XMLEOF
   <Config Name="PUID" Target="PUID" Default="99" Mode="" Description="" Type="Variable" Display="always" Required="false" Mask="false">99</Config>
   <Config Name="PGID" Target="PGID" Default="100" Mode="" Description="" Type="Variable" Display="always" Required="false" Mask="false">100</Config>
   <Config Name="UMASK" Target="UMASK" Default="000" Mode="" Description="" Type="Variable" Display="always" Required="false" Mask="false">000</Config>
+  <Config Name="DMM_API_ID" Target="DMM_API_ID" Default="" Mode="" Description="DMM Affiliate API ID (for plot/synopsis)" Type="Variable" Display="always" Required="false" Mask="false">${DMM_API_ID}</Config>
+  <Config Name="DMM_AFFILIATE_ID" Target="DMM_AFFILIATE_ID" Default="" Mode="" Description="DMM Affiliate ID (for plot/synopsis)" Type="Variable" Display="always" Required="false" Mask="false">${DMM_AFFILIATE_ID}</Config>
 </Container>
 XMLEOF
 
@@ -153,6 +161,11 @@ echo "  - Plugin installed to Plex"
 echo "  - JavSP config at ${JAVSP_APPDATA}/config.ini"
 echo "  - Unraid Docker template created (check Docker tab)"
 echo "  - Media folders: ${MEDIA_PATH}/input and ${MEDIA_PATH}/output"
+if [ -n "${DMM_API_ID}" ]; then
+echo "  - DMM API configured (plot/synopsis enabled)"
+else
+echo "  - DMM API not configured (plot/synopsis disabled — register at https://affiliate.dmm.com)"
+fi
 echo ""
 echo "Next steps:"
 echo "  1. Restart Plex (Docker tab → plex → Restart)"

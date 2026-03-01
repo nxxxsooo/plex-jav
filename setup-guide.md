@@ -13,6 +13,8 @@ Fill in your values below, then run the setup command.
 | Proxy URL | ______________ | `http://192.168.1.1:7890` |
 | Docker network | ______________ | `bridge` |
 | JavSP WebUI port | ______________ | `8501` |
+| DMM API ID (optional) | ______________ | `your_api_id` |
+| DMM Affiliate ID (optional) | ______________ | `yourname-999` |
 
 ## Run
 
@@ -29,6 +31,7 @@ The script will ask the questions above interactively, then:
 3. Download actress avatar database (~4.5MB)
 4. Generate JavSP config
 5. Create Unraid Docker template for JavSP container
+6. Configure DMM API credentials (if provided) for plot/synopsis data
 
 ## After Setup
 

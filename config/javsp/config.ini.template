@@ -20,7 +20,7 @@ retry = 3
 timeout = 15
 
 [CrawlerSelect]
-normal = javbus,javdb,jav321,njav,airav,avsox,javlib
+normal = javbus,javdb,fanza,jav321,njav,avsox,javlib
 fc2 = fc2,avsox,javdb,javmenu,fc2ppvdb
 cid = fanza
 getchu = dl_getchu

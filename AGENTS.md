@@ -10,7 +10,7 @@ JAV files → [JavSP Docker] → NFO + artwork → [Plex + JAVnfoMoviesImporter 
 
 Three components:
 
-1. **JavSP** (`rishinyan/javsp:v1.8`) — Docker container that scrapes metadata, generates NFO files and downloads cover/fanart artwork
+1. **JavSP** (`ghcr.io/nxxxsooo/javsp:latest`) — Docker container that scrapes metadata, generates NFO files and downloads cover/fanart artwork. Includes DMM Affiliate API support for plot/synopsis data.
 2. **JAVnfoMoviesImporter.bundle** — Plex plugin that reads NFO files and automatically fetches actress avatar photos from the [gfriends](https://github.com/gfriends/gfriends) database
 3. **Unraid Docker + Plex** — the runtime environment
 
@@ -36,6 +36,10 @@ Ask the user these questions (adapt based on what they volunteer):
 4. **Docker network**: "Which Docker network should the containers use? (e.g., `bridge`, `br0`, or a custom bridge like `proxynet`)"
 
 5. **Existing Plex**: "Do you already have Plex running on Unraid, or should I set it up fresh?"
+
+6. **DMM API** (optional): "Do you have a DMM Affiliate API account? This enables plot/synopsis data.
+   - If yes: what's your API ID and Affiliate ID?
+   - If no: you can register for free at https://affiliate.dmm.com/ (takes 1-3 business days for approval)"
 
 ### Step 2: Install the Plugin
 
@@ -72,6 +76,8 @@ Use the template at `config/javsp/config.ini.template` to generate a `config.ini
 - Output dir inside container is always `/media/output`
 - Save to Unraid at `<JAVSP_APPDATA>/config.ini`
 
+If the user has DMM API credentials, set the `DMM_API_ID` and `DMM_AFFILIATE_ID` environment variables on the Docker container. These enable plot/synopsis fetching from FANZA via the DMM Affiliate API.
+
 Also copy `config/javsp/entrypoint.sh` to `<JAVSP_APPDATA>/entrypoint.sh` and `chmod +x` it.
 
 ### Step 4: Create JavSP Docker Container
@@ -81,7 +87,7 @@ Also copy `config/javsp/entrypoint.sh` to `<JAVSP_APPDATA>/entrypoint.sh` and `c
 | Setting | Value |
 |---------|-------|
 | Name | `javsp` |
-| Repository | `rishinyan/javsp:v1.8` |
+| Repository | `ghcr.io/nxxxsooo/javsp:latest` |
 | Network | User's chosen network |
 | WebUI | `http://[IP]:[PORT:8501]` |
 | Extra Parameters | `--entrypoint /config/entrypoint.sh` |
@@ -92,6 +98,8 @@ Also copy `config/javsp/entrypoint.sh` to `<JAVSP_APPDATA>/entrypoint.sh` and `c
 | Variable: PUID | `99` |
 | Variable: PGID | `100` |
 | Variable: UMASK | `000` |
+| Variable: DMM_API_ID | DMM Affiliate API ID (optional, for plot/synopsis) |
+| Variable: DMM_AFFILIATE_ID | DMM Affiliate ID (optional, for plot/synopsis) |
 
 **If proxy is needed**, add to Extra Parameters:
 ```
@@ -189,4 +197,4 @@ plex-jav/
 - JavSP: https://github.com/Yuukiy/JavSP
 - JAVnfoMoviesImporter (original): https://github.com/ddd354/JAVnfoMoviesImporter.bundle
 - gfriends avatar database: https://github.com/gfriends/gfriends
-- JavSP Docker image: https://hub.docker.com/r/rishinyan/javsp
+- JavSP Docker image (fork): https://github.com/nxxxsooo/JavSP/pkgs/container/javsp

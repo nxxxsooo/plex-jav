@@ -8,7 +8,7 @@ A complete JAV metadata solution for **Unraid + Plex** — automated scraping, N
 Drop JAV files → JavSP scrapes metadata → Plex reads NFO + fetches actress photos → fully organized library
 ```
 
-- **JavSP** (Docker) scrapes metadata from multiple sources, generates NFO files and downloads artwork
+- **JavSP** (Docker) scrapes metadata from multiple sources, generates NFO files and downloads artwork. Supports DMM Affiliate API for plot/synopsis data.
 - **JAVnfoMoviesImporter** (Plex plugin) reads NFO files and automatically fetches actress avatar photos from [gfriends](https://github.com/gfriends/gfriends)
 
 ## Setup
@@ -40,7 +40,7 @@ Compatible tools:
 
 ## Credits
 
-- [JavSP](https://github.com/Yuukiy/JavSP) by Yuukiy
+- [JavSP](https://github.com/Yuukiy/JavSP) by Yuukiy (fork: [nxxxsooo/JavSP](https://github.com/nxxxsooo/JavSP))
 - [JAVnfoMoviesImporter](https://github.com/ddd354/JAVnfoMoviesImporter.bundle) by ddd354 (modified for avatar support)
 - [gfriends](https://github.com/gfriends/gfriends) — actress avatar database
 
