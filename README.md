@@ -8,8 +8,7 @@ A complete JAV metadata solution for **Unraid + Plex** — automated scraping, N
 Drop JAV files → JavSP scrapes metadata → Plex reads NFO + fetches actress photos → fully organized library
 ```
 
-- **JavSP** (Docker) scrapes metadata from multiple sources, generates NFO files and downloads artwork
-- **MetaTube** (Docker) provides plot/synopsis from 20+ sources including FANZA/DMM — no API keys needed
+- **JavSP** (Docker) scrapes metadata from multiple sources, generates NFO files and downloads artwork. Includes an embedded **MetaTube** server that provides plot/synopsis from 20+ sources including FANZA/DMM — no API keys needed
 - **JAVnfoMoviesImporter** (Plex plugin) reads NFO files and automatically fetches actress avatar photos from [gfriends](https://github.com/gfriends/gfriends)
 
 ## Setup
@@ -26,9 +25,8 @@ The script will ask a few questions about your environment (media paths, proxy, 
 
 - Install the Plex plugin
 - Download the actress avatar database
-- Set up MetaTube (local metadata server for plot/synopsis)
-- Generate JavSP config
-- Create Unraid Docker templates
+- Generate JavSP config (with embedded MetaTube for plot/synopsis)
+- Create Unraid Docker template
 
 ### Option 2: AI-Assisted Setup
 

@@ -5,17 +5,14 @@ You are setting up a complete JAV metadata solution on **Unraid** with **Plex**.
 ## Architecture
 
 ```
-JAV files → [JavSP Docker] → NFO + artwork → [Plex + JAVnfoMoviesImporter plugin] → fully tagged library with actress avatars
-                 ↑
-          [MetaTube Docker] provides plot/synopsis from 20+ sources (no API keys needed)
+JAV files → [JavSP Docker (with embedded MetaTube)] → NFO + artwork → [Plex + JAVnfoMoviesImporter plugin] → fully tagged library with actress avatars
 ```
 
-Four components:
+Three components:
 
-1. **MetaTube** (`ghcr.io/metatube-community/metatube-server:latest`) — Local metadata server with 20+ built-in data sources including FANZA/DMM. Provides plot/synopsis data without needing any API keys.
-2. **JavSP** (`ghcr.io/nxxxsooo/javsp:latest`) — Docker container that scrapes metadata from MetaTube and other sources, generates NFO files and downloads cover/fanart artwork.
-3. **JAVnfoMoviesImporter.bundle** — Plex plugin that reads NFO files and automatically fetches actress avatar photos from the [gfriends](https://github.com/gfriends/gfriends) database
-4. **Unraid Docker + Plex** — the runtime environment
+1. **JavSP** (`ghcr.io/nxxxsooo/javsp:latest`) — Docker container that scrapes metadata, generates NFO files and downloads cover/fanart artwork. Includes an **embedded MetaTube server** that provides plot/synopsis from 20+ sources including FANZA/DMM — no API keys needed.
+2. **JAVnfoMoviesImporter.bundle** — Plex plugin that reads NFO files and automatically fetches actress avatar photos from the [gfriends](https://github.com/gfriends/gfriends) database
+3. **Unraid Docker + Plex** — the runtime environment
 
 ## Setup Workflow
 
@@ -32,35 +29,19 @@ Ask the user these questions (adapt based on what they volunteer):
 
 2. **Plex appdata**: "Where is your Plex appdata? (Usually `/mnt/user/appdata/plex`)"
 
-3. **Proxy/Network**: "Does your Unraid need a proxy to access the internet?
+3. **JavSP appdata**: "Where to store JavSP config and MetaTube data? (Default: `/mnt/user/appdata/javsp`)"
+
+4. **Proxy/Network**: "Does your Unraid need a proxy to access the internet?
    - If yes: what's the proxy URL? (e.g., `http://192.168.1.1:7890`)
    - If no: we'll configure direct access"
 
-4. **Docker network**: "Which Docker network should the containers use? (e.g., `bridge`, `br0`, or a custom bridge like `proxynet`)"
+5. **Docker network**: "Which Docker network should the container use? (e.g., `bridge`, `br0`, or a custom bridge)"
 
-5. **Existing Plex**: "Do you already have Plex running on Unraid, or should I set it up fresh?"
+6. **Existing Plex**: "Do you already have Plex running on Unraid, or should I set it up fresh?"
 
-6. **MetaTube token** (optional): "Do you want to secure the MetaTube API with a token?"
+7. **MetaTube token** (optional): "Do you want to secure the embedded MetaTube API with a token?"
 
-### Step 2: Set Up MetaTube Container
-
-MetaTube runs as a lightweight Docker container with SQLite storage.
-
-**On Unraid Docker GUI**, create a container:
-
-| Setting | Value |
-|---------|-------|
-| Name | `metatube` |
-| Repository | `ghcr.io/metatube-community/metatube-server:latest` |
-| Network | User's chosen network |
-| Extra Parameters | `--workdir /data` |
-| Post Arguments | `-dsn metatube.db -port 8080 -db-auto-migrate` |
-| Port | `8080` → `8080` TCP |
-| Path: Data | Container: `/data` → Host: `<METATUBE_APPDATA>` (e.g., `/mnt/user/appdata/metatube`) |
-
-If token is set, add `-token <TOKEN>` to Post Arguments.
-
-### Step 3: Install the Plugin
+### Step 2: Install the Plugin
 
 Copy the plugin bundle to Plex's plugin directory:
 
@@ -85,20 +66,19 @@ After copying, restart Plex. The plugin appears as agent **"JAVnfoMoviesImporter
 - Go to Settings → Agents → Movies → JAVnfoMoviesImporter
 - Set as primary agent for your JAV library
 
-### Step 4: Generate JavSP Config
+### Step 3: Generate JavSP Config
 
-Use the template at `config/javsp/config.ini.template` to generate a `config.ini`:
+Use the template at `config/javsp/config.yml.template` to generate a `config.yml`:
 
-- Replace `{{USE_PROXY}}` with `yes` or `no`
-- Replace `{{PROXY_URL}}` with the user's proxy URL (or leave empty)
-- Replace `{{METATUBE_URL}}` with the MetaTube server URL (e.g., `http://metatube:8080` on custom network, or `http://<UNRAID_IP>:8080` on bridge)
+- Replace `{{PROXY_SERVER}}` with the user's proxy URL (YAML quoted) or `null`
+- Replace `{{DMM_API_ID}}` and `{{DMM_AFFILIATE_ID}}` with values or `null`
 - Input dir inside container is always `/media/input`
 - Output dir inside container is always `/media/output`
-- Save to Unraid at `<JAVSP_APPDATA>/config.ini`
+- Save to Unraid at `<JAVSP_APPDATA>/config.yml`
 
-Also copy `config/javsp/entrypoint.sh` to `<JAVSP_APPDATA>/entrypoint.sh` and `chmod +x` it.
+**Note**: MetaTube URL is no longer needed in config — the embedded server runs at `localhost:8080` inside the container automatically.
 
-### Step 5: Create JavSP Docker Container
+### Step 4: Create JavSP Docker Container
 
 **On Unraid, prefer the Docker GUI.** Guide the user to create a container with these settings:
 
@@ -108,25 +88,25 @@ Also copy `config/javsp/entrypoint.sh` to `<JAVSP_APPDATA>/entrypoint.sh` and `c
 | Repository | `ghcr.io/nxxxsooo/javsp:latest` |
 | Network | User's chosen network |
 | WebUI | `http://[IP]:[PORT:8501]` |
-| Extra Parameters | `--entrypoint /config/entrypoint.sh` |
 | Port | `8501` → `8501` TCP |
-| Path: config | Container: `/app/core/config.ini` → Host: `<JAVSP_APPDATA>/config.ini` |
-| Path: entrypoint | Container: `/config/entrypoint.sh` → Host: `<JAVSP_APPDATA>/entrypoint.sh` |
-| Path: media | Container: `/media` → Host: `<MEDIA_PATH>` |
+| Path: Config | Container: `/config` → Host: `<JAVSP_APPDATA>` |
+| Path: Media | Container: `/media` → Host: `<MEDIA_PATH>` |
 | Variable: PUID | `99` |
 | Variable: PGID | `100` |
 | Variable: UMASK | `000` |
-| Variable: METATUBE_URL | MetaTube server URL (e.g., `http://metatube:8080`) |
-| Variable: METATUBE_TOKEN | MetaTube access token (if set on MetaTube container) |
+| Variable: METATUBE_ENABLED | `1` (enables embedded MetaTube server) |
+| Variable: METATUBE_TOKEN | Access token (optional, secures the embedded API) |
 
-**If proxy is needed**, add to Extra Parameters:
+**If proxy is needed**, add environment variables:
 ```
---entrypoint /config/entrypoint.sh --env HTTP_PROXY=<PROXY_URL> --env HTTPS_PROXY=<PROXY_URL> --env NO_PROXY=localhost,127.0.0.1
+HTTP_PROXY=<PROXY_URL>
+HTTPS_PROXY=<PROXY_URL>
+NO_PROXY=localhost,127.0.0.1
 ```
 
 Alternatively, an Unraid XML template can be generated — see `docker-compose.yml` for the equivalent compose definition.
 
-### Step 6: Create Media Folder Structure
+### Step 5: Create Media Folder Structure
 
 ```bash
 mkdir -p <MEDIA_PATH>/input   # Drop raw JAV files here
@@ -134,7 +114,7 @@ mkdir -p <MEDIA_PATH>/output  # JavSP writes organized files here
 chown -R 99:100 <MEDIA_PATH>
 ```
 
-### Step 7: Configure Plex Library
+### Step 6: Configure Plex Library
 
 Guide the user:
 1. Create a new **Movies** library in Plex
@@ -143,28 +123,27 @@ Guide the user:
 4. Under Advanced, enable "Local Media Assets" as well
 5. Scan the library
 
-### Step 8: Verify
+### Step 7: Verify
 
 Test the full pipeline:
 1. Drop a JAV file into `<MEDIA_PATH>/input`
 2. Run or trigger the JavSP container (via WebUI at port 8501)
 3. Check that NFO + artwork appear in `<MEDIA_PATH>/output/<actress>/<number>/`
-4. Verify the NFO contains a `<plot>` tag (provided by MetaTube)
+4. Verify the NFO contains a `<plot>` tag (provided by embedded MetaTube)
 5. Scan the Plex library
 6. Verify the movie shows up with metadata, plot, and actress avatar photos
 
 ## Key Technical Details
 
-### MetaTube Integration
+### Embedded MetaTube
 
-MetaTube is a Go-based metadata SDK with a REST API:
+MetaTube is a Go-based metadata server bundled inside the JavSP Docker image:
 - **20+ data sources** including FANZA/DMM — built-in crawlers, no API keys needed
-- Uses SQLite for caching (auto-created on first run)
-- JavSP's `metatube` crawler searches MetaTube first for plot/synopsis data
-- API endpoints: `GET /v1/movies/search?q={dvdid}`, `GET /v1/movies/{provider}/{id}?lazy=false`
-- The `summary` field in the response maps to JavSP's `plot` field
-
-**Network note**: If using a custom Docker network (not `bridge`), containers can resolve each other by name (e.g., `http://metatube:8080`). On default bridge, use the host IP instead.
+- Runs automatically on container start (port 8080 inside the container)
+- Uses SQLite for caching, stored at `/config/metatube/metatube.db`
+- JavSP's `metatube` crawler connects to `localhost:8080` automatically
+- Can be disabled by setting `METATUBE_ENABLED=0`
+- Optionally secured with `METATUBE_TOKEN`
 
 ### Plugin Avatar Mechanism
 
@@ -180,23 +159,24 @@ The plugin (`__init__.py`) fetches actress avatars via:
 
 ### JavSP Container Flow
 
-1. Scans `/media/input` for video files
-2. Identifies movie numbers from filenames
-3. Queries MetaTube for plot/synopsis (priority source)
-4. Scrapes additional metadata from other sites (javbus, javdb, jav321, etc.)
-5. Generates NFO file + downloads cover/fanart
-6. Moves organized files to `/media/output/<actress>/<number>/`
-7. `entrypoint.sh` fixes ownership to `99:100` (Unraid nobody:users)
+1. Entrypoint starts embedded MetaTube server in background
+2. Waits for MetaTube to be ready (up to 15 seconds)
+3. Scans `/media/input` for video files
+4. Identifies movie numbers from filenames
+5. Queries MetaTube (localhost) for plot/synopsis (priority source)
+6. Scrapes additional metadata from other sites (javbus, javdb, jav321, etc.)
+7. Generates NFO file + downloads cover/fanart
+8. Moves organized files to `/media/output/<actress>/<number>/`
 
 ### Unraid Permissions
 
 All files must be owned by `99:100` (nobody:users) for Unraid compatibility.
-The `entrypoint.sh` wrapper handles this automatically after JavSP runs.
+The entrypoint handles this automatically.
 
 ### ProxyFree Sites
 
 JavSP has built-in proxy-free mirror URLs for some sites. These change over time.
-If scraping fails, the user may need to update `[ProxyFree]` in `config.ini` with current mirrors.
+If scraping fails, the user may need to update `proxy_free` in `config.yml` with current mirrors.
 
 ## File Reference
 
@@ -208,10 +188,11 @@ plex-jav/
 ├── .gitignore
 ├── .env.example                       # Environment variable template
 ├── docker-compose.yml                 # Reference compose (Unraid uses Docker GUI)
+├── setup.sh                           # Interactive setup script
+├── setup-guide.md                     # Manual setup reference
 ├── config/
 │   └── javsp/
-│       ├── config.ini.template        # JavSP config template (AI fills in values)
-│       └── entrypoint.sh             # Permission-fixing wrapper script
+│       └── config.yml.template        # JavSP config template (AI fills in values)
 └── plugin/
     └── JAVnfoMoviesImporter.bundle/   # Plex plugin (copy to Plex Plug-ins dir)
         ├── Contents/

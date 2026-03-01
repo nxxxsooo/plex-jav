@@ -9,7 +9,6 @@ services:
   javsp:
     image: ghcr.io/nxxxsooo/javsp:latest
     container_name: javsp
-    entrypoint: /config/entrypoint.sh
     environment:
       - PUID=99
       - PGID=100
@@ -17,21 +16,17 @@ services:
       - HTTP_PROXY=${HTTP_PROXY:-}
       - HTTPS_PROXY=${HTTPS_PROXY:-}
       - NO_PROXY=${NO_PROXY:-localhost,127.0.0.1}
-      - METATUBE_URL=${METATUBE_URL:-http://metatube:8080}
+      - METATUBE_ENABLED=${METATUBE_ENABLED:-1}
       - METATUBE_TOKEN=${METATUBE_TOKEN:-}
       - DMM_API_ID=${DMM_API_ID:-}
       - DMM_AFFILIATE_ID=${DMM_AFFILIATE_ID:-}
     volumes:
-      - ${JAVSP_APPDATA}/config.ini:/app/core/config.ini:rw
-      - ${JAVSP_APPDATA}/entrypoint.sh:/config/entrypoint.sh:rw
+      - ${JAVSP_APPDATA}:/config:rw
       - ${MEDIA_PATH}:/media:rw
     ports:
       - "8501:8501"
     network_mode: ${DOCKER_NETWORK:-bridge}
-    privileged: true
     restart: unless-stopped
-    depends_on:
-      - metatube
 
   plex:
     image: lscr.io/linuxserver/plex:latest
@@ -47,20 +42,5 @@ services:
       - ${MEDIA_PATH}:/media:rw
     ports:
       - "32400:32400"
-    network_mode: ${DOCKER_NETWORK:-bridge}
-    restart: unless-stopped
-
-  metatube:
-    image: ghcr.io/metatube-community/metatube-server:latest
-    container_name: metatube
-    environment:
-      - TOKEN=${METATUBE_TOKEN:-}
-      - DSN=metatube.db
-      - DB_AUTO_MIGRATE=1
-    volumes:
-      - ${METATUBE_APPDATA:-/mnt/user/appdata/metatube}:/data:rw
-    working_dir: /data
-    ports:
-      - "${METATUBE_PORT:-8080}:8080"
     network_mode: ${DOCKER_NETWORK:-bridge}
     restart: unless-stopped
