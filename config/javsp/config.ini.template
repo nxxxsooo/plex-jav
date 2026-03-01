@@ -1,0 +1,95 @@
+# JavSP Configuration Template
+# This file is used by the AI setup assistant to generate your config.ini
+# Variables in {{BRACKETS}} will be replaced during setup
+
+[MovieID]
+ignore_whole_word = 144P;240P;360P;480P;720P;1080P;2K;4K
+ignore_regex = \w+2048\.com;Carib(beancom)?;[^a-z\d](f?hd|lt)[^a-z\d]
+
+[File]
+scan_dir = /media/input
+media_ext = 3gp;avi;f4v;flv;iso;m2ts;m4v;mkv;mov;mp4;mpeg;rm;rmvb;ts;vob;webm;wmv;strm;mpg
+ignore_folder = #recycle;#整理完成
+ignore_video_file_less_than = 232
+enable_file_move = yes
+
+[Network]
+use_proxy = {{USE_PROXY}}
+proxy = {{PROXY_URL}}
+retry = 3
+timeout = 15
+
+[CrawlerSelect]
+normal = javbus,javdb,jav321,njav,airav,avsox,javlib
+fc2 = fc2,avsox,javdb,javmenu,fc2ppvdb
+cid = fanza
+getchu = dl_getchu
+gyutto = gyutto
+
+[Crawler]
+required_keys = cover,title
+hardworking_mode = yes
+respect_site_avid = yes
+fc2fan_local_path = 
+title__remove_actor = yes
+title__chinese_first = yes
+sleep_after_scraping = 1
+ignore_javdb_cover = auto
+unify_actress_name = yes
+
+[ProxyFree]
+avsox = https://avsox.click
+javdb = https://javdb570.com
+javbus = https://www.seedmm.bond
+javlib = https://www.a95i.com
+
+[NamingRule]
+media_servers = universal
+output_folder = /media/output
+save_dir = $actress/$num
+filename = $num
+max_path_len = 250
+calc_path_len_by_byte = auto
+max_actress_count = 10
+nfo_title = $num
+text_for_censored = Censored
+text_for_uncensored = Uncensored
+text_for_unknown_censorship = Unknown
+null_for_title = #Unknown Title
+null_for_actress = #Unknown Actress
+null_for_serial = #Unknown Series
+null_for_director = #Unknown Director
+null_for_producer = #Unknown Producer
+null_for_publisher = #Unknown Publisher
+
+[Picture]
+use_big_cover = yes
+use_ai_crop = no
+use_ai_crop_labels = \d,ARA,SIRO,GANA,MIUM
+ai_engine = 
+aip_appid = 
+aip_api_key = 
+aip_secret_key = 
+add_label_to_cover = no
+
+[Translate]
+engine = google
+translate_title = yes
+translate_plot = yes
+baidu_appid = 
+baidu_key = 
+bing_key = 
+claude_key = 
+groq_key = 
+
+[NFO]
+add_custom_genres = yes
+add_custom_genres_fields = $genre,$censor
+add_custom_tags = yes
+add_custom_tags_fields = $genre,$censor
+add_set_field = no
+
+[Other]
+check_update = yes
+auto_update = yes
+auto_exit = false

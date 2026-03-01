@@ -1,0 +1,6 @@
+.DS_Store
+.env
+config/javsp/config.ini
+plugin/JAVnfoMoviesImporter.bundle/Filetree.json
+*.pyc
+__pycache__/

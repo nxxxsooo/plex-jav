@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleIdentifier</key>
+	<string>com.plexapp.agents.javnfo</string>
+	<key>PlexFrameworkVersion</key>
+	<string>2</string>
+	<key>PlexPluginClass</key>
+	<string>Agent</string>
+	<key>PlexPluginCodePolicy</key>
+	<string>Elevated</string>
+	<key>PlexAgentAttributionText</key>
+	<string>
+<![CDATA[
+JAVnfoMoviesImporter (V 2.0)
+<br /><br />
+is a modified version of the original XBMCnfoMoviesImporter.bundle. This version specifically modifies the actor
+avatar code block to read from ddd354/gfriends github repo to support automatic plex jav avatar scrape.
+]]>
+	</string>
+</dict>
+</plist>

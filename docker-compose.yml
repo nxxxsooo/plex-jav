@@ -1,0 +1,45 @@
+version: "3.8"
+
+# Plex JAV Solution for Unraid
+# This compose file is a reference. On Unraid, containers are typically
+# managed via the Docker GUI with XML templates.
+# The AI setup assistant can generate Unraid XML templates from this.
+
+services:
+  javsp:
+    image: rishinyan/javsp:v1.8
+    container_name: javsp
+    entrypoint: /config/entrypoint.sh
+    environment:
+      - PUID=99
+      - PGID=100
+      - UMASK=000
+      - HTTP_PROXY=${HTTP_PROXY:-}
+      - HTTPS_PROXY=${HTTPS_PROXY:-}
+      - NO_PROXY=${NO_PROXY:-localhost,127.0.0.1}
+    volumes:
+      - ${JAVSP_APPDATA}/config.ini:/app/core/config.ini:rw
+      - ${JAVSP_APPDATA}/entrypoint.sh:/config/entrypoint.sh:rw
+      - ${MEDIA_PATH}:/media:rw
+    ports:
+      - "8501:8501"
+    network_mode: ${DOCKER_NETWORK:-bridge}
+    privileged: true
+    restart: unless-stopped
+
+  plex:
+    image: lscr.io/linuxserver/plex:latest
+    container_name: plex
+    environment:
+      - PUID=99
+      - PGID=100
+      - TZ=${TZ:-Asia/Shanghai}
+      - VERSION=docker
+      - PLEX_CLAIM=${PLEX_CLAIM:-}
+    volumes:
+      - ${PLEX_APPDATA}:/config:rw
+      - ${MEDIA_PATH}:/media:rw
+    ports:
+      - "32400:32400"
+    network_mode: ${DOCKER_NETWORK:-bridge}
+    restart: unless-stopped
