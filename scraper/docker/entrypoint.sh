@@ -4,14 +4,17 @@ set -e
 PUID=${PUID:-99}
 PGID=${PGID:-100}
 
-# Create group if it doesn't exist
-if ! getent group javsp > /dev/null 2>&1; then
+# Create group if GID doesn't exist
+if ! getent group "$PGID" > /dev/null 2>&1; then
     groupadd -g "$PGID" javsp
 fi
 
+# Resolve group name for the GID
+GROUP_NAME=$(getent group "$PGID" | cut -d: -f1)
+
 # Create user if it doesn't exist
 if ! getent passwd javsp > /dev/null 2>&1; then
-    useradd -u "$PUID" -g "$PGID" -d /app -s /bin/bash javsp
+    useradd -u "$PUID" -g "$GROUP_NAME" -d /app -s /bin/bash -M javsp 2>/dev/null || true
 fi
 
 # Fix ownership of working directories
