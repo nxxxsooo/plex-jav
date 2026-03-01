@@ -15,6 +15,7 @@ RUN poetry self add poetry-dynamic-versioning && \
     poetry config virtualenvs.in-project true && \
     rm -f poetry.lock && \
     poetry lock && \
+    touch README.md && \
     poetry install && \
     rm -rf /app/.git
 
