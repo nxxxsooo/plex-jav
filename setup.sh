@@ -25,6 +25,10 @@ read -p "JavSP appdata path [/mnt/user/appdata/javsp]: " JAVSP_APPDATA
 JAVSP_APPDATA="${JAVSP_APPDATA:-/mnt/user/appdata/javsp}"
 JAVSP_APPDATA="${JAVSP_APPDATA%/}"
 
+read -p "MetaTube appdata path [/mnt/user/appdata/metatube]: " METATUBE_APPDATA
+METATUBE_APPDATA="${METATUBE_APPDATA:-/mnt/user/appdata/metatube}"
+METATUBE_APPDATA="${METATUBE_APPDATA%/}"
+
 read -p "Need a proxy? (y/n) [n]: " NEED_PROXY
 NEED_PROXY="${NEED_PROXY:-n}"
 
@@ -44,22 +48,43 @@ DOCKER_NETWORK="${DOCKER_NETWORK:-bridge}"
 read -p "JavSP WebUI port [8501]: " JAVSP_PORT
 JAVSP_PORT="${JAVSP_PORT:-8501}"
 
-read -p "DMM Affiliate API ID (optional, for plot/synopsis — register free at https://affiliate.dmm.com): " DMM_API_ID
+read -p "MetaTube port [8080]: " METATUBE_PORT
+METATUBE_PORT="${METATUBE_PORT:-8080}"
+
+read -p "MetaTube access token (optional, secures the API): " METATUBE_TOKEN
+METATUBE_TOKEN="${METATUBE_TOKEN:-}"
+
+# Determine MetaTube URL for JavSP config
+# If on the same Docker network, use container name; otherwise use host IP
+if [[ "$DOCKER_NETWORK" == "bridge" ]]; then
+    # On default bridge, containers can't resolve by name — use host IP
+    UNRAID_IP=$(hostname -I 2>/dev/null | awk '{print $1}')
+    METATUBE_URL="http://${UNRAID_IP:-127.0.0.1}:${METATUBE_PORT}"
+else
+    # On custom network, containers can resolve by name
+    METATUBE_URL="http://metatube:8080"
+fi
+
+read -p "DMM Affiliate API ID (optional, legacy — MetaTube replaces this): " DMM_API_ID
 DMM_API_ID="${DMM_API_ID:-}"
 
 read -p "DMM Affiliate ID (optional, e.g. yourname-999): " DMM_AFFILIATE_ID
 DMM_AFFILIATE_ID="${DMM_AFFILIATE_ID:-}"
 echo ""
 echo "--- Confirm ---"
-echo "Media path:     ${MEDIA_PATH}"
-echo "  Input:        ${MEDIA_PATH}/input"
-echo "  Output:       ${MEDIA_PATH}/output"
-echo "Plex appdata:   ${PLEX_APPDATA}"
-echo "JavSP appdata:  ${JAVSP_APPDATA}"
-echo "Proxy:          ${USE_PROXY} ${PROXY_URL}"
-echo "Network:        ${DOCKER_NETWORK}"
-echo "JavSP port:     ${JAVSP_PORT}"
-echo "DMM API:        ${DMM_API_ID:-(not set)} / ${DMM_AFFILIATE_ID:-(not set)}"
+echo "Media path:       ${MEDIA_PATH}"
+echo "  Input:          ${MEDIA_PATH}/input"
+echo "  Output:         ${MEDIA_PATH}/output"
+echo "Plex appdata:     ${PLEX_APPDATA}"
+echo "JavSP appdata:    ${JAVSP_APPDATA}"
+echo "MetaTube appdata: ${METATUBE_APPDATA}"
+echo "Proxy:            ${USE_PROXY} ${PROXY_URL}"
+echo "Network:          ${DOCKER_NETWORK}"
+echo "JavSP port:       ${JAVSP_PORT}"
+echo "MetaTube port:    ${METATUBE_PORT}"
+echo "MetaTube URL:     ${METATUBE_URL}"
+echo "MetaTube token:   ${METATUBE_TOKEN:-(not set)}"
+echo "DMM API:          ${DMM_API_ID:-(not set)} / ${DMM_AFFILIATE_ID:-(not set)}"
 echo ""
 read -p "Proceed? (y/n) [y]: " CONFIRM
 CONFIRM="${CONFIRM:-y}"
@@ -69,13 +94,15 @@ if [[ ! "$CONFIRM" =~ ^[Yy] ]]; then
 fi
 
 echo ""
-echo "[1/6] Creating directories..."
+echo "[1/7] Creating directories..."
 mkdir -p "${MEDIA_PATH}/input"
 mkdir -p "${MEDIA_PATH}/output"
 mkdir -p "${JAVSP_APPDATA}"
+mkdir -p "${METATUBE_APPDATA}"
 chown -R 99:100 "${MEDIA_PATH}" 2>/dev/null || true
+chown -R 99:100 "${METATUBE_APPDATA}" 2>/dev/null || true
 
-echo "[2/6] Downloading repo..."
+echo "[2/7] Downloading repo..."
 TMP_DIR=$(mktemp -d)
 if command -v git &>/dev/null; then
     git clone --depth 1 "$REPO_URL" "$TMP_DIR/plex-jav" 2>/dev/null
@@ -94,7 +121,7 @@ else
     done
 fi
 
-echo "[3/6] Installing Plex plugin..."
+echo "[3/7] Installing Plex plugin..."
 PLEX_PLUGINS="${PLEX_APPDATA}/Library/Application Support/Plex Media Server/Plug-ins"
 mkdir -p "$PLEX_PLUGINS"
 rm -rf "$PLEX_PLUGINS/JAVnfoMoviesImporter.bundle"
@@ -105,17 +132,44 @@ curl -sSL -o "$PLEX_PLUGINS/JAVnfoMoviesImporter.bundle/Filetree.json" \
     "https://raw.githubusercontent.com/gfriends/gfriends/master/Filetree.json" 2>/dev/null || \
     echo "     WARNING: Failed to download Filetree.json. Plugin will try at runtime."
 
-echo "[4/6] Generating JavSP config..."
+echo "[4/7] Generating JavSP config..."
 cp "$TMP_DIR/plex-jav/config/javsp/entrypoint.sh" "${JAVSP_APPDATA}/entrypoint.sh"
 chmod +x "${JAVSP_APPDATA}/entrypoint.sh"
 
 sed -e "s|{{USE_PROXY}}|${USE_PROXY}|g" \
     -e "s|{{PROXY_URL}}|${PROXY_URL}|g" \
+    -e "s|{{METATUBE_URL}}|${METATUBE_URL}|g" \
     "$TMP_DIR/plex-jav/config/javsp/config.ini.template" > "${JAVSP_APPDATA}/config.ini"
 
-echo "[5/6] Generating Unraid Docker template for JavSP..."
+echo "[5/7] Generating Unraid Docker template for MetaTube..."
 TEMPLATE_DIR="/boot/config/plugins/dockerman/templates-user"
 mkdir -p "$TEMPLATE_DIR"
+cat > "${TEMPLATE_DIR}/my-metatube.xml" <<XMLEOF
+<?xml version="1.0"?>
+<Container version="2">
+  <Name>metatube</Name>
+  <Repository>ghcr.io/metatube-community/metatube-server:latest</Repository>
+  <Registry>https://github.com/metatube-community/metatube-sdk-go/pkgs/container/metatube-server</Registry>
+  <Network>${DOCKER_NETWORK}</Network>
+  <MyIP/>
+  <Shell>sh</Shell>
+  <Privileged>false</Privileged>
+  <Support>https://github.com/nxxxsooo/plex-jav</Support>
+  <Project>https://github.com/metatube-community/metatube-sdk-go</Project>
+  <Overview>MetaTube metadata server for Plex JAV Solution — provides plot/synopsis from 20+ sources</Overview>
+  <WebUI>http://[IP]:[PORT:${METATUBE_PORT}]</WebUI>
+  <ExtraParams>--workdir /data</ExtraParams>
+  <PostArgs>-dsn metatube.db -port 8080 -db-auto-migrate -token ${METATUBE_TOKEN}</PostArgs>
+  <CPUset/>
+  <DonateText/>
+  <DonateLink/>
+  <Requires/>
+  <Config Name="API Port" Target="8080" Default="8080" Mode="tcp" Description="MetaTube API port" Type="Port" Display="always" Required="false" Mask="false">${METATUBE_PORT}</Config>
+  <Config Name="Data" Target="/data" Default="" Mode="rw" Description="MetaTube database storage" Type="Path" Display="always" Required="true" Mask="false">${METATUBE_APPDATA}</Config>
+</Container>
+XMLEOF
+
+echo "[6/7] Generating Unraid Docker template for JavSP..."
 cat > "${TEMPLATE_DIR}/my-javsp.xml" <<XMLEOF
 <?xml version="1.0"?>
 <Container version="2">
@@ -143,12 +197,14 @@ cat > "${TEMPLATE_DIR}/my-javsp.xml" <<XMLEOF
   <Config Name="PUID" Target="PUID" Default="99" Mode="" Description="" Type="Variable" Display="always" Required="false" Mask="false">99</Config>
   <Config Name="PGID" Target="PGID" Default="100" Mode="" Description="" Type="Variable" Display="always" Required="false" Mask="false">100</Config>
   <Config Name="UMASK" Target="UMASK" Default="000" Mode="" Description="" Type="Variable" Display="always" Required="false" Mask="false">000</Config>
-  <Config Name="DMM_API_ID" Target="DMM_API_ID" Default="" Mode="" Description="DMM Affiliate API ID (for plot/synopsis)" Type="Variable" Display="always" Required="false" Mask="false">${DMM_API_ID}</Config>
-  <Config Name="DMM_AFFILIATE_ID" Target="DMM_AFFILIATE_ID" Default="" Mode="" Description="DMM Affiliate ID (for plot/synopsis)" Type="Variable" Display="always" Required="false" Mask="false">${DMM_AFFILIATE_ID}</Config>
+  <Config Name="METATUBE_URL" Target="METATUBE_URL" Default="${METATUBE_URL}" Mode="" Description="MetaTube server URL (for plot/synopsis)" Type="Variable" Display="always" Required="false" Mask="false">${METATUBE_URL}</Config>
+  <Config Name="METATUBE_TOKEN" Target="METATUBE_TOKEN" Default="" Mode="" Description="MetaTube access token" Type="Variable" Display="always" Required="false" Mask="false">${METATUBE_TOKEN}</Config>
+  <Config Name="DMM_API_ID" Target="DMM_API_ID" Default="" Mode="" Description="DMM Affiliate API ID (legacy, optional)" Type="Variable" Display="always" Required="false" Mask="false">${DMM_API_ID}</Config>
+  <Config Name="DMM_AFFILIATE_ID" Target="DMM_AFFILIATE_ID" Default="" Mode="" Description="DMM Affiliate ID (legacy, optional)" Type="Variable" Display="always" Required="false" Mask="false">${DMM_AFFILIATE_ID}</Config>
 </Container>
 XMLEOF
 
-echo "[6/6] Cleanup..."
+echo "[7/7] Cleanup..."
 rm -rf "$TMP_DIR"
 
 echo ""
@@ -159,19 +215,16 @@ echo ""
 echo "What's done:"
 echo "  - Plugin installed to Plex"
 echo "  - JavSP config at ${JAVSP_APPDATA}/config.ini"
-echo "  - Unraid Docker template created (check Docker tab)"
+echo "  - MetaTube template created (for plot/synopsis — no API keys needed)"
+echo "  - JavSP template created (check Docker tab)"
 echo "  - Media folders: ${MEDIA_PATH}/input and ${MEDIA_PATH}/output"
-if [ -n "${DMM_API_ID}" ]; then
-echo "  - DMM API configured (plot/synopsis enabled)"
-else
-echo "  - DMM API not configured (plot/synopsis disabled — register at https://affiliate.dmm.com)"
-fi
 echo ""
 echo "Next steps:"
 echo "  1. Restart Plex (Docker tab → plex → Restart)"
-echo "  2. Add JavSP container (Docker tab → Add Container → Template: javsp)"
-echo "  3. Create a Movies library in Plex:"
+echo "  2. Add MetaTube container (Docker tab → Add Container → Template: metatube)"
+echo "  3. Add JavSP container (Docker tab → Add Container → Template: javsp)"
+echo "  4. Create a Movies library in Plex:"
 echo "     - Content folder: ${MEDIA_PATH}/output"
 echo "     - Agent: JAVnfoMoviesImporter"
-echo "  4. Drop files into ${MEDIA_PATH}/input, run JavSP, scan library"
+echo "  5. Drop files into ${MEDIA_PATH}/input, run JavSP, scan library"
 echo ""

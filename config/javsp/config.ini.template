@@ -18,9 +18,10 @@ use_proxy = {{USE_PROXY}}
 proxy = {{PROXY_URL}}
 retry = 3
 timeout = 15
+metatube_url = {{METATUBE_URL}}
 
 [CrawlerSelect]
-normal = javbus,javdb,fanza,jav321,njav,avsox,javlib
+normal = metatube,javbus,javdb,fanza,jav321,njav,avsox,javlib
 fc2 = fc2,avsox,javdb,javmenu,fc2ppvdb
 cid = fanza
 getchu = dl_getchu
