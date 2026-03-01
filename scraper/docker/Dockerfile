@@ -10,6 +10,7 @@ RUN apt update && apt install -y git
 
 COPY . .
 
+ENV POETRY_DYNAMIC_VERSIONING_BYPASS=0.0.0
 RUN poetry self add poetry-dynamic-versioning && \
     poetry config virtualenvs.in-project true && \
     poetry install && \
