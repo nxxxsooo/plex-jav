@@ -79,4 +79,10 @@ if [ "$METATUBE_ENABLED" = "1" ]; then
 fi
 
 # Run javsp as the specified user
-exec gosu "$PUID:$PGID" /app/.venv/bin/javsp "$@"
+gosu "$PUID:$PGID" /app/.venv/bin/javsp "$@" || true
+
+# Keep MetaTube server running after JavSP completes
+if [ -n "${MT_PID:-}" ] && kill -0 $MT_PID 2>/dev/null; then
+    echo "[entrypoint] JavSP finished. MetaTube server still running on port $METATUBE_PORT."
+    wait $MT_PID
+fi
