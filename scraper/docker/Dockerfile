@@ -21,7 +21,7 @@ RUN poetry self add poetry-dynamic-versioning && \
 
 
 # Copy MetaTube server binary from official image
-FROM ghcr.io/metatube-community/metatube-server:latest AS metatube
+FROM ghcr.io/metatube-community/metatube-server:dev AS metatube
 
 
 FROM python:3.12-slim AS runner

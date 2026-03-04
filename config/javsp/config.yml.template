@@ -27,7 +27,7 @@ network:
   timeout: PT15S
   dmm_api_id: {{DMM_API_ID}}
   dmm_affiliate_id: {{DMM_AFFILIATE_ID}}
-  metatube_url: null
+  metatube_url: http://localhost:8080
 
 crawler:
   selection:

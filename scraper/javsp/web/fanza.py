@@ -48,6 +48,24 @@ def _get_api_credentials() -> Optional[Tuple[str, str]]:
     return None
 
 
+def _dvdid_to_cid(dvdid: str) -> str:
+    """Convert a DVD ID (e.g. 'SNOS-038', 'IPZZ-703') to a DMM content ID.
+
+    DMM CIDs follow the pattern: lowercase prefix + zero-padded number (usually 5 digits).
+    Examples: SNOS-038 -> snos00038, IPZZ-703 -> ipzz00703, ABF-306 -> abf00306
+    Some studios use 3-digit padding: e.g., ABP-001 -> abp001
+    We try 5-digit padding first (most common), which also covers 3-digit originals.
+    """
+    m = re.match(r"^([A-Za-z]+)-?(\d+)$", dvdid)
+    if not m:
+        return dvdid.lower().replace("-", "")
+    prefix = m.group(1).lower()
+    num = m.group(2)
+    # Zero-pad to 5 digits (DMM's most common format)
+    padded = num.zfill(5)
+    return f"{prefix}{padded}"
+
+
 def _normalize_cid_for_api(cid: str) -> str:
     """Normalize a CID for DMM API search.
 
@@ -533,10 +551,22 @@ def parse_data(movie: MovieInfo):
     """Parse movie data from FANZA/DMM.
 
     Strategy:
-    1. Try DMM Affiliate API first (reliable, structured data, requires credentials)
-    2. Fall back to web scraping (may fail due to DMM's SPA migration)
-    3. If both fail, raise MovieNotFoundError
+    1. If cid is missing but dvdid is available, derive cid from dvdid
+    2. Try DMM Affiliate API first (reliable, structured data, requires credentials)
+    3. Fall back to web scraping (may fail due to DMM's SPA migration)
+    4. If both fail, raise MovieNotFoundError
+
+    This function supports being called from the 'normal' crawler list
+    (where movie.cid is typically None and movie.dvdid is set).
     """
+    # Derive cid from dvdid if not already set (enables use in 'normal' crawler list)
+    if not movie.cid and movie.dvdid:
+        movie.cid = _dvdid_to_cid(movie.dvdid)
+        logger.debug(f"Derived cid={movie.cid} from dvdid={movie.dvdid}")
+
+    if not movie.cid:
+        raise MovieNotFoundError(__name__, movie.dvdid or "unknown")
+
     # Try API first
     if _parse_via_api(movie):
         return
