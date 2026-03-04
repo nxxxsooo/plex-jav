@@ -11,6 +11,7 @@ Configuration:
 """
 
 import os
+import re
 import logging
 
 import requests
@@ -48,6 +49,41 @@ def _get_headers():
     if token:
         headers["Authorization"] = f"Bearer {token}"
     return headers
+
+
+def _dvdid_to_cid(dvdid: str) -> str:
+    """Convert DVD ID to FANZA content ID.
+
+    FANZA CIDs are lowercase prefix + zero-padded number (5 digits).
+    Examples: SNOS-038 -> snos00038, IPZZ-703 -> ipzz00703
+    """
+    m = re.match(r"^([A-Za-z]+)-?(\d+)$", dvdid)
+    if not m:
+        return dvdid.lower().replace("-", "")
+    return f"{m.group(1).lower()}{m.group(2).zfill(5)}"
+
+
+def _try_fanza_direct(base_url, dvdid):
+    """Try FANZA direct detail lookup via MetaTube, bypassing broken search.
+
+    MetaTube's FANZA search endpoint is broken (returns empty), but the
+    detail endpoint works perfectly when given a valid CID.
+    """
+    cid = _dvdid_to_cid(dvdid)
+    info = _get_movie_info(base_url, "FANZA", cid)
+    if info and info.get("summary"):
+        logger.debug(f"FANZA direct hit for {dvdid} (cid={cid})")
+        return info
+    # Some titles use 3-digit padding (e.g., ABP-001 -> abp001)
+    m = re.match(r"^([A-Za-z]+)-?(\d+)$", dvdid)
+    if m:
+        cid_short = f"{m.group(1).lower()}{m.group(2).zfill(3)}"
+        if cid_short != cid:
+            info = _get_movie_info(base_url, "FANZA", cid_short)
+            if info and info.get("summary"):
+                logger.debug(f"FANZA direct hit for {dvdid} (cid={cid_short}, 3-pad)")
+                return info
+    return None
 
 
 def _search_movie(base_url, dvdid):
@@ -95,28 +131,8 @@ def _get_movie_info(base_url, provider, movie_id):
     return None
 
 
-def parse_data(movie: MovieInfo):
-    """Parse movie data from a MetaTube server instance."""
-    url = _get_metatube_url()
-    if not url:
-        raise MovieNotFoundError(__name__, movie.dvdid)
-
-    # Search for the movie
-    results = _search_movie(url, movie.dvdid)
-    if not results:
-        raise MovieNotFoundError(__name__, movie.dvdid)
-
-    # Pick the best match (first result)
-    best = results[0]
-    provider = best.get("provider", "")
-    mid = best.get("id", "")
-
-    # Get full movie info with plot/summary
-    info = _get_movie_info(url, provider, mid)
-    if not info:
-        raise MovieNotFoundError(__name__, movie.dvdid)
-
-    # Map MetaTube fields to JavSP MovieInfo
+def _apply_info(movie: MovieInfo, info: dict):
+    """Map MetaTube info dict fields to JavSP MovieInfo attributes."""
     movie.title = info.get("title")
     movie.plot = info.get("summary")  # The key field — plot/synopsis
     movie.cover = info.get("big_cover_url") or info.get("cover_url")
@@ -135,6 +151,50 @@ def parse_data(movie: MovieInfo):
     movie.preview_pics = info.get("preview_images") or []
     movie.preview_video = info.get("preview_video_url")
     movie.url = info.get("homepage")
+
+
+def parse_data(movie: MovieInfo):
+    """Parse movie data from a MetaTube server instance.
+
+    Strategy (optimized for plot/synopsis retrieval):
+      1. Try FANZA direct detail first — bypasses broken FANZA search and
+         returns full data including plot/summary for most titles.
+      2. Fall back to generic MetaTube search → detail for titles FANZA
+         doesn't have (region-blocked, etc.).
+      3. If search-based result lacks plot, try FANZA direct as supplement.
+    """
+    url = _get_metatube_url()
+    if not url:
+        raise MovieNotFoundError(__name__, movie.dvdid)
+
+    # Strategy 1: Try FANZA direct detail (best source for plot)
+    fanza_info = _try_fanza_direct(url, movie.dvdid)
+    if fanza_info:
+        _apply_info(movie, fanza_info)
+        return
+
+    # Strategy 2: Fall back to MetaTube search
+    results = _search_movie(url, movie.dvdid)
+    if not results:
+        raise MovieNotFoundError(__name__, movie.dvdid)
+
+    best = results[0]
+    provider = best.get("provider", "")
+    mid = best.get("id", "")
+
+    info = _get_movie_info(url, provider, mid)
+    if not info:
+        raise MovieNotFoundError(__name__, movie.dvdid)
+
+    # Strategy 3: If search result has no plot, try FANZA direct to supplement
+    if not info.get("summary"):
+        fanza_info = _try_fanza_direct(url, movie.dvdid)
+        if fanza_info and fanza_info.get("summary"):
+            # Use FANZA for plot but keep other data from original provider
+            info["summary"] = fanza_info["summary"]
+            logger.debug(f"Supplemented plot from FANZA for {movie.dvdid}")
+
+    _apply_info(movie, info)
 
 
 if __name__ == "__main__":
