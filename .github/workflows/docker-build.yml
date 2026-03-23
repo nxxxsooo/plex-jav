@@ -37,6 +37,15 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
 
+    - name: Extract version from tag
+      id: version
+      run: |
+        if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+          echo "value=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+        else
+          echo "value=dev" >> $GITHUB_OUTPUT
+        fi
+
     - name: Docker meta
       id: meta
       uses: docker/metadata-action@v5
@@ -56,5 +65,7 @@ jobs:
         push: ${{ github.event_name != 'pull_request' }}
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
+        build-args: |
+          VERSION=${{ steps.version.outputs.value }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
