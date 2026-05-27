@@ -215,6 +215,17 @@ plex-jav/
         └── .gitignore
 ```
 
+## Resolved Issues
+
+### Version shows 0.0.0 (fixed v1.5.0)
+- **Root cause**: `ENV POETRY_DYNAMIC_VERSIONING_BYPASS=0.0.0` in Dockerfile hardcoded the version, and `.git` is removed during build so poetry-dynamic-versioning can't read git tags.
+- **Fix**: Added `ARG VERSION=dev` to Dockerfile, GitHub Actions extracts version from git tag and passes it as `--build-arg VERSION=v1.5.0`. The `importlib.metadata.version('javsp')` call in `func.py:176` now returns the real version.
+- **Files**: `scraper/docker/Dockerfile`, `.github/workflows/docker-build.yml`
+
+### "未找到影片文件" with no helpful context
+- **Root cause**: All files in input directory were `.xltd` (incomplete Xunlei downloads), which JavSP doesn't recognize as video files.
+- **Fix**: Converted `jav` zshrc alias to a shell function that shows status messages and a helpful hint when no files are found.
+
 ## Upstream References
 
 - JavSP (upstream, archived): https://github.com/Yuukiy/JavSP
