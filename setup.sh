@@ -14,18 +14,18 @@ echo ""
 
 # --- Gather user input ---
 
-read -p "Media path (parent folder for input/output, e.g. /mnt/user/media/jav): " MEDIA_PATH
+read -r -p "Media path (parent folder for input/output, e.g. /mnt/user/media/jav): " MEDIA_PATH
 MEDIA_PATH="${MEDIA_PATH%/}"
 
-read -p "Plex appdata path [/mnt/user/appdata/plex]: " PLEX_APPDATA
+read -r -p "Plex appdata path [/mnt/user/appdata/plex]: " PLEX_APPDATA
 PLEX_APPDATA="${PLEX_APPDATA:-/mnt/user/appdata/plex}"
 PLEX_APPDATA="${PLEX_APPDATA%/}"
 
-read -p "JavSP appdata path [/mnt/user/appdata/javsp]: " JAVSP_APPDATA
+read -r -p "JavSP appdata path [/mnt/user/appdata/javsp]: " JAVSP_APPDATA
 JAVSP_APPDATA="${JAVSP_APPDATA:-/mnt/user/appdata/javsp}"
 JAVSP_APPDATA="${JAVSP_APPDATA%/}"
 
-read -p "Need a proxy? (y/n) [n]: " NEED_PROXY
+read -r -p "Need a proxy? (y/n) [n]: " NEED_PROXY
 NEED_PROXY="${NEED_PROXY:-n}"
 
 PROXY_URL=""
@@ -33,24 +33,21 @@ PROXY_SERVER="null"
 PROXY_ENVS=""
 
 if [[ "$NEED_PROXY" =~ ^[Yy] ]]; then
-    read -p "Proxy URL (e.g. http://192.168.1.1:7890): " PROXY_URL
+    read -r -p "Proxy URL (e.g. http://192.168.1.1:7890): " PROXY_URL
     PROXY_SERVER="'${PROXY_URL}'"
     PROXY_ENVS="--env HTTP_PROXY=${PROXY_URL} --env HTTPS_PROXY=${PROXY_URL} --env NO_PROXY=localhost,127.0.0.1"
 fi
 
-read -p "Docker network [bridge]: " DOCKER_NETWORK
+read -r -p "Docker network [bridge]: " DOCKER_NETWORK
 DOCKER_NETWORK="${DOCKER_NETWORK:-bridge}"
 
-read -p "JavSP WebUI port [8501]: " JAVSP_PORT
-JAVSP_PORT="${JAVSP_PORT:-8501}"
-
-read -p "MetaTube access token (optional, secures the embedded API): " METATUBE_TOKEN
+read -r -p "MetaTube access token (optional, secures the embedded API): " METATUBE_TOKEN
 METATUBE_TOKEN="${METATUBE_TOKEN:-}"
 
-read -p "DMM Affiliate API ID (optional, legacy): " DMM_API_ID
+read -r -p "DMM Affiliate API ID (optional, legacy): " DMM_API_ID
 DMM_API_ID="${DMM_API_ID:-}"
 
-read -p "DMM Affiliate ID (optional, e.g. yourname-999): " DMM_AFFILIATE_ID
+read -r -p "DMM Affiliate ID (optional, e.g. yourname-999): " DMM_AFFILIATE_ID
 DMM_AFFILIATE_ID="${DMM_AFFILIATE_ID:-}"
 echo ""
 echo "--- Confirm ---"
@@ -61,12 +58,11 @@ echo "Plex appdata:     ${PLEX_APPDATA}"
 echo "JavSP appdata:    ${JAVSP_APPDATA}"
 echo "Proxy:            ${PROXY_URL:-(direct)}"
 echo "Network:          ${DOCKER_NETWORK}"
-echo "JavSP port:       ${JAVSP_PORT}"
-echo "MetaTube:         embedded in JavSP (auto-start)"
+echo "MetaTube:         embedded in each one-shot JavSP run"
 echo "MetaTube token:   ${METATUBE_TOKEN:-(not set)}"
 echo "DMM API:          ${DMM_API_ID:-(not set)} / ${DMM_AFFILIATE_ID:-(not set)}"
 echo ""
-read -p "Proceed? (y/n) [y]: " CONFIRM
+read -r -p "Proceed? (y/n) [y]: " CONFIRM
 CONFIRM="${CONFIRM:-y}"
 if [[ ! "$CONFIRM" =~ ^[Yy] ]]; then
     echo "Aborted."
@@ -134,9 +130,9 @@ TEMPLATE_DIR="/boot/config/plugins/dockerman/templates-user"
 mkdir -p "$TEMPLATE_DIR"
 
 # Build extra params
-EXTRA_PARAMS=""
+EXTRA_PARAMS="--restart no"
 if [ -n "$PROXY_ENVS" ]; then
-    EXTRA_PARAMS="$PROXY_ENVS"
+    EXTRA_PARAMS="$EXTRA_PARAMS $PROXY_ENVS"
 fi
 
 cat > "${TEMPLATE_DIR}/my-plex-jav.xml" <<XMLEOF
@@ -152,14 +148,13 @@ cat > "${TEMPLATE_DIR}/my-plex-jav.xml" <<XMLEOF
   <Support>https://github.com/nxxxsooo/plex-jav</Support>
   <Project>https://github.com/nxxxsooo/plex-jav</Project>
   <Overview>JavSP metadata scraper with embedded MetaTube server for Plex JAV Solution</Overview>
-  <WebUI>http://[IP]:[PORT:${JAVSP_PORT}]</WebUI>
+  <WebUI/>
   <ExtraParams>${EXTRA_PARAMS}</ExtraParams>
   <PostArgs/>
   <CPUset/>
   <DonateText/>
   <DonateLink/>
   <Requires/>
-  <Config Name="WebUI Port" Target="8501" Default="8501" Mode="tcp" Description="JavSP WebUI" Type="Port" Display="always" Required="false" Mask="false">${JAVSP_PORT}</Config>
   <Config Name="Config" Target="/config" Default="" Mode="rw" Description="JavSP + MetaTube config/data" Type="Path" Display="always" Required="true" Mask="false">${JAVSP_APPDATA}</Config>
   <Config Name="Media" Target="/media" Default="" Mode="rw" Description="Media folder (input + output)" Type="Path" Display="always" Required="true" Mask="false">${MEDIA_PATH}</Config>
   <Config Name="PUID" Target="PUID" Default="99" Mode="" Description="" Type="Variable" Display="always" Required="false" Mask="false">99</Config>
@@ -196,5 +191,7 @@ echo "  2. Add JavSP container (Docker tab → Add Container → Template: javsp
 echo "  3. Create a Movies library in Plex:"
 echo "     - Content folder: ${MEDIA_PATH}/output"
 echo "     - Agent: JAVnfoMoviesImporter"
-echo "  4. Drop files into ${MEDIA_PATH}/input, run JavSP, scan library"
+echo "  4. Move completed files into ${MEDIA_PATH}/input"
+echo "  5. Start plex-jav manually; it exits after one scan"
+echo "  6. Check the container log, then scan the Plex library"
 echo ""

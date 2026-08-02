@@ -25,7 +25,8 @@ Ask the user these questions (adapt based on what they volunteer):
 1. **Media path**: "Where on your Unraid do you want to store JAV files? I need:
    - An **input** folder (where you drop raw JAV files)
    - An **output** folder (where JavSP writes organized files with NFO/artwork)
-   - Example: `/mnt/user/media/jav/` with `input/` and `output/` subdirectories"
+   - Example: `/mnt/user/media/jav/` with `input/` and `output/` subdirectories
+   - The input folder is for completed files only; downloads must finish elsewhere before being moved into it"
 
 2. **Plex appdata**: "Where is your Plex appdata? (Usually `/mnt/user/appdata/plex`)"
 
@@ -76,7 +77,7 @@ Use the template at `config/javsp/config.yml.template` to generate a `config.yml
 - Output dir inside container is always `/media/output`
 - Save to Unraid at `<JAVSP_APPDATA>/config.yml`
 
-**Note**: MetaTube URL is no longer needed in config — the embedded server runs at `localhost:8080` inside the container automatically.
+**Note**: MetaTube URL is no longer needed in config — the embedded server runs at `localhost:8080` while each one-shot job is active.
 
 ### Step 4: Create JavSP Docker Container
 
@@ -87,8 +88,7 @@ Use the template at `config/javsp/config.yml.template` to generate a `config.yml
 | Name | `plex-jav` |
 | Repository | `ghcr.io/nxxxsooo/plex-jav:latest` |
 | Network | User's chosen network |
-| WebUI | `http://[IP]:[PORT:8501]` |
-| Port | `8501` → `8501` TCP |
+| Restart policy | `no` — the container is an on-demand job |
 | Path: Config | Container: `/config` → Host: `<JAVSP_APPDATA>` |
 | Path: Media | Container: `/media` → Host: `<MEDIA_PATH>` |
 | Variable: PUID | `99` |
@@ -109,7 +109,7 @@ Alternatively, an Unraid XML template can be generated — see `docker-compose.y
 ### Step 5: Create Media Folder Structure
 
 ```bash
-mkdir -p <MEDIA_PATH>/input   # Drop raw JAV files here
+mkdir -p <MEDIA_PATH>/input   # Move completed JAV files here
 mkdir -p <MEDIA_PATH>/output  # JavSP writes organized files here
 chown -R 99:100 <MEDIA_PATH>
 ```
@@ -126,12 +126,14 @@ Guide the user:
 ### Step 7: Verify
 
 Test the full pipeline:
-1. Drop a JAV file into `<MEDIA_PATH>/input`
-2. Run or trigger the JavSP container (via WebUI at port 8501)
-3. Check that NFO + artwork appear in `<MEDIA_PATH>/output/<actress>/<number>/`
-4. Verify the NFO contains a `<plot>` tag (provided by embedded MetaTube)
-5. Scan the Plex library
-6. Verify the movie shows up with metadata, plot, and actress avatar photos
+1. Finish downloading a JAV file outside `<MEDIA_PATH>/input`
+2. Move the completed file into `<MEDIA_PATH>/input`
+3. Manually start the stopped `plex-jav` container in the Unraid Docker tab
+4. Follow the container log and verify it stops with exit code `0`
+5. Check that NFO + artwork appear in `<MEDIA_PATH>/output/<actress>/<number>/`
+6. Verify the NFO contains a `<plot>` tag (provided by embedded MetaTube)
+7. Scan the Plex library
+8. Verify the movie shows up with metadata, plot, and actress avatar photos
 
 ## Key Technical Details
 
@@ -139,7 +141,8 @@ Test the full pipeline:
 
 MetaTube is a Go-based metadata server bundled inside the JavSP Docker image:
 - **20+ data sources** including FANZA/DMM — built-in crawlers, no API keys needed
-- Runs automatically on container start (port 8080 inside the container)
+- Runs automatically for the duration of each manually started job (port 8080 inside the container)
+- Is not published on a host port and stops when JavSP finishes
 - Uses SQLite for caching, stored at `/config/metatube/metatube.db`
 - JavSP's `metatube` crawler connects to `localhost:8080` automatically
 - Can be disabled by setting `METATUBE_ENABLED=0`
@@ -161,12 +164,14 @@ The plugin (`__init__.py`) fetches actress avatars via:
 
 1. Entrypoint starts embedded MetaTube server in background
 2. Waits for MetaTube to be ready (up to 15 seconds)
-3. Scans `/media/input` for video files
-4. Identifies movie numbers from filenames
-5. Queries MetaTube (localhost) for plot/synopsis (priority source)
-6. Scrapes additional metadata from other sites (javbus, javdb, jav321, etc.)
-7. Generates NFO file + downloads cover/fanart
-8. Moves organized files to `/media/output/<actress>/<number>/`
+3. Exits without running JavSP if MetaTube is not ready
+4. Scans `/media/input` once for video files
+5. Identifies movie numbers from filenames
+6. Queries MetaTube (localhost) for plot/synopsis (priority source)
+7. Scrapes additional metadata from other sites (javbus, javdb, jav321, etc.)
+8. Generates NFO file + downloads cover/fanart
+9. Moves organized files to `/media/output/<actress>/<number>/`
+10. Stops MetaTube and exits with JavSP's status code
 
 ### Unraid Permissions
 

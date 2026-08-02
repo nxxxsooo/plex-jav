@@ -25,7 +25,12 @@ logger = logging.getLogger(__name__)
 
 def _get_metatube_url():
     """Get MetaTube server URL from config, environment, or default."""
-    # 1. Config file
+    # 1. Environment variable (the Docker entrypoint sets this to the
+    #    embedded server's actual port).
+    env_url = os.environ.get("METATUBE_URL")
+    if env_url:
+        return env_url.rstrip("/")
+    # 2. Config file
     try:
         from javsp.config import Cfg
 
@@ -34,10 +39,6 @@ def _get_metatube_url():
             return str(url).rstrip("/")
     except Exception:
         pass
-    # 2. Environment variable
-    env_url = os.environ.get("METATUBE_URL")
-    if env_url:
-        return env_url.rstrip("/")
     # 3. Default (embedded server in Docker)
     return "http://localhost:8080"
 

@@ -24,6 +24,12 @@ jobs:
       with:
         fetch-depth: 0
 
+    - name: Validate shell entrypoints
+      run: bash -n scraper/docker/entrypoint.sh setup.sh
+
+    - name: Test one-shot container lifecycle
+      run: python3 -m unittest scraper/unittest/test_entrypoint.py -v
+
     - name: Set up QEMU
       uses: docker/setup-qemu-action@v3
 
