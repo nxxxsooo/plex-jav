@@ -49,8 +49,12 @@ stop_process() {
 cleanup() {
     local status=$?
     trap - EXIT INT TERM
-    stop_process "$JAVSP_PID" "JavSP"
-    stop_process "$MT_PID" "MetaTube"
+    if [ -n "$JAVSP_PID" ]; then
+        stop_process "$JAVSP_PID" "JavSP"
+    fi
+    if [ -n "$MT_PID" ]; then
+        stop_process "$MT_PID" "MetaTube"
+    fi
     exit "$status"
 }
 
