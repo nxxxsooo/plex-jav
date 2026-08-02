@@ -59,31 +59,50 @@ class EntrypointLifecycleTests(unittest.TestCase):
         self.metatube_bin = self._write_executable(
             "fake-metatube",
             """
-            #!/bin/sh
-            if [ "${METATUBE_TEST_MODE:-ready}" = "fail" ]; then
-              exit 42
-            fi
-            printf '%s\n' "$$" > "$METATUBE_PID_FILE"
-            touch "$METATUBE_READY_FILE"
-            sleep 3600 &
-            child=$!
-            trap 'kill "$child" 2>/dev/null || true; wait "$child" 2>/dev/null || true; touch "$METATUBE_STOPPED_FILE"; exit 0' TERM INT
-            wait "$child"
+            #!/usr/bin/env python3
+            import os
+            import signal
+            import sys
+            from pathlib import Path
+
+            if os.environ.get("METATUBE_TEST_MODE", "ready") == "fail":
+                raise SystemExit(42)
+
+            Path(os.environ["METATUBE_PID_FILE"]).write_text(f"{os.getpid()}\\n")
+            Path(os.environ["METATUBE_READY_FILE"]).touch()
+
+            def stop(_signum, _frame):
+                Path(os.environ["METATUBE_STOPPED_FILE"]).touch()
+                raise SystemExit(0)
+
+            signal.signal(signal.SIGTERM, stop)
+            signal.signal(signal.SIGINT, stop)
+            while True:
+                signal.pause()
             """,
         )
         self.javsp_bin = self._write_executable(
             "fake-javsp",
             """
-            #!/bin/sh
-            printf '%s\n' "$$" > "$JAVSP_PID_FILE"
-            touch "$JAVSP_STARTED_FILE"
-            if [ "${JAVSP_TEST_MODE:-exit}" = "block" ]; then
-              sleep 3600 &
-              child=$!
-              trap 'kill "$child" 2>/dev/null || true; wait "$child" 2>/dev/null || true; touch "$JAVSP_STOPPED_FILE"; exit 0' TERM INT
-              wait "$child"
-            fi
-            exit "${JAVSP_EXIT_CODE:-0}"
+            #!/usr/bin/env python3
+            import os
+            import signal
+            from pathlib import Path
+
+            Path(os.environ["JAVSP_PID_FILE"]).write_text(f"{os.getpid()}\\n")
+            Path(os.environ["JAVSP_STARTED_FILE"]).touch()
+
+            def stop(_signum, _frame):
+                Path(os.environ["JAVSP_STOPPED_FILE"]).touch()
+                raise SystemExit(0)
+
+            if os.environ.get("JAVSP_TEST_MODE", "exit") == "block":
+                signal.signal(signal.SIGTERM, stop)
+                signal.signal(signal.SIGINT, stop)
+                while True:
+                    signal.pause()
+
+            raise SystemExit(int(os.environ.get("JAVSP_EXIT_CODE", "0")))
             """,
         )
 
