@@ -10,6 +10,7 @@ MEDIA_DIR=${MEDIA_DIR:-/media}
 JAVSP_USER=${JAVSP_USER:-javsp}
 JAVSP_BIN=${JAVSP_BIN:-$APP_DIR/.venv/bin/javsp}
 METATUBE_BIN=${METATUBE_BIN:-/usr/local/bin/metatube-server}
+PROCESS_STOP_TIMEOUT=${PROCESS_STOP_TIMEOUT:-5}
 
 MT_PID=""
 JAVSP_PID=""
@@ -28,17 +29,21 @@ stop_process() {
 
     echo "[entrypoint] Stopping $name..."
     kill -TERM "$pid" 2>/dev/null || true
-    for _ in $(seq 1 20); do
-        if ! kill -0 "$pid" 2>/dev/null; then
-            break
+
+    # Reap the child immediately when it exits while a bounded watchdog
+    # enforces shutdown for a process that ignores SIGTERM. Polling with
+    # kill -0 alone mistakes an unreaped zombie for a live process.
+    (
+        sleep "$PROCESS_STOP_TIMEOUT"
+        if kill -0 "$pid" 2>/dev/null; then
+            echo "[entrypoint] $name did not stop in time; killing it."
+            kill -KILL "$pid" 2>/dev/null || true
         fi
-        sleep 0.25
-    done
-    if kill -0 "$pid" 2>/dev/null; then
-        echo "[entrypoint] $name did not stop in time; killing it."
-        kill -KILL "$pid" 2>/dev/null || true
-    fi
+    ) &
+    local watchdog_pid=$!
     wait "$pid" 2>/dev/null || true
+    kill "$watchdog_pid" 2>/dev/null || true
+    wait "$watchdog_pid" 2>/dev/null || true
 }
 
 cleanup() {

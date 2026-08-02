@@ -63,19 +63,25 @@ class EntrypointLifecycleTests(unittest.TestCase):
             if [ "${METATUBE_TEST_MODE:-ready}" = "fail" ]; then
               exit 42
             fi
+            printf '%s\n' "$$" > "$METATUBE_PID_FILE"
             touch "$METATUBE_READY_FILE"
-            trap 'touch "$METATUBE_STOPPED_FILE"; exit 0' TERM INT
-            while :; do sleep 0.1; done
+            sleep 3600 &
+            child=$!
+            trap 'kill "$child" 2>/dev/null || true; wait "$child" 2>/dev/null || true; touch "$METATUBE_STOPPED_FILE"; exit 0' TERM INT
+            wait "$child"
             """,
         )
         self.javsp_bin = self._write_executable(
             "fake-javsp",
             """
             #!/bin/sh
+            printf '%s\n' "$$" > "$JAVSP_PID_FILE"
             touch "$JAVSP_STARTED_FILE"
             if [ "${JAVSP_TEST_MODE:-exit}" = "block" ]; then
-              trap 'touch "$JAVSP_STOPPED_FILE"; exit 0' TERM INT
-              while :; do sleep 0.1; done
+              sleep 3600 &
+              child=$!
+              trap 'kill "$child" 2>/dev/null || true; wait "$child" 2>/dev/null || true; touch "$JAVSP_STOPPED_FILE"; exit 0' TERM INT
+              wait "$child"
             fi
             exit "${JAVSP_EXIT_CODE:-0}"
             """,
@@ -96,12 +102,15 @@ class EntrypointLifecycleTests(unittest.TestCase):
                 "METATUBE_BIN": str(self.metatube_bin),
                 "METATUBE_ENABLED": "1",
                 "METATUBE_PORT": "18080",
+                "PROCESS_STOP_TIMEOUT": "0.5",
                 "TEST_UID": str(os.getuid()),
                 "TEST_GID": str(os.getgid()),
                 "TEST_USER": "testuser",
                 "METATUBE_READY_FILE": str(self.root / "metatube-ready"),
+                "METATUBE_PID_FILE": str(self.root / "metatube-pid"),
                 "METATUBE_STOPPED_FILE": str(self.root / "metatube-stopped"),
                 "JAVSP_STARTED_FILE": str(self.root / "javsp-started"),
+                "JAVSP_PID_FILE": str(self.root / "javsp-pid"),
                 "JAVSP_STOPPED_FILE": str(self.root / "javsp-stopped"),
             }
         )
@@ -127,12 +136,17 @@ class EntrypointLifecycleTests(unittest.TestCase):
             check=False,
         )
 
+    def _assert_pid_stopped(self, filename):
+        pid = int((self.root / filename).read_text().strip())
+        with self.assertRaises(ProcessLookupError):
+            os.kill(pid, 0)
+
     def test_successful_scan_stops_metatube_and_exits_zero(self):
         result = self._run(JAVSP_EXIT_CODE=0)
 
         self.assertEqual(result.returncode, 0, result.stdout)
         self.assertTrue((self.root / "javsp-started").exists())
-        self.assertTrue((self.root / "metatube-stopped").exists())
+        self._assert_pid_stopped("metatube-pid")
         self.assertIn("JavSP completed successfully", result.stdout)
 
     def test_metatube_readiness_failure_prevents_javsp(self):
@@ -146,7 +160,7 @@ class EntrypointLifecycleTests(unittest.TestCase):
         result = self._run(JAVSP_EXIT_CODE=1)
 
         self.assertEqual(result.returncode, 1, result.stdout)
-        self.assertTrue((self.root / "metatube-stopped").exists())
+        self._assert_pid_stopped("metatube-pid")
         self.assertIn("JavSP failed with exit code 1", result.stdout)
 
     def test_sigterm_stops_javsp_and_metatube(self):
@@ -171,8 +185,8 @@ class EntrypointLifecycleTests(unittest.TestCase):
         output, _ = process.communicate(timeout=10)
 
         self.assertEqual(process.returncode, 143, output)
-        self.assertTrue((self.root / "javsp-stopped").exists())
-        self.assertTrue((self.root / "metatube-stopped").exists())
+        self._assert_pid_stopped("javsp-pid")
+        self._assert_pid_stopped("metatube-pid")
 
 
 if __name__ == "__main__":

@@ -49,7 +49,7 @@ using the v2 image; otherwise an old `unless-stopped` policy will cause a
 restart loop.
 
 1. Stop `plex-jav`.
-2. Change the image to `ghcr.io/nxxxsooo/plex-jav:2.0.0`.
+2. Change the image to `ghcr.io/nxxxsooo/plex-jav:2.0.1`.
 3. Set the restart policy to `no`.
 4. Remove the `8501` port mapping and WebUI URL.
 5. Apply/recreate the container from the updated template.
